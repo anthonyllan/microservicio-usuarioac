@@ -12,6 +12,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -37,6 +38,7 @@ public class ClienteServiceImpl implements ClienteService {
     private final ClienteRepository clienteRepository;
     private final UsuarioService usuarioService;
     private final UsuarioRepository usuarioRepository;
+    private final PasswordEncoder passwordEncoder;
     
     @Value("${app.upload.dir.clientes:/uploads/clientes}")
     private String uploadDir;
@@ -128,7 +130,17 @@ public class ClienteServiceImpl implements ClienteService {
             }
             
             if (clienteDto.getUsuario().getContrasena() != null && !clienteDto.getUsuario().getContrasena().isEmpty()) {
-                usuario.setContrasena(clienteDto.getUsuario().getContrasena());
+                String contrasenaPlana = clienteDto.getUsuario().getContrasena();
+                
+                // Verificar si ya está encriptada (comienza con $2a$)
+                if (contrasenaPlana.startsWith("$2a$")) {
+                    System.out.println("ℹ️  [ClienteService] Contraseña ya encriptada, no se modifica");
+                } else {
+                    // Encriptar la contraseña
+                    String contrasenaEncriptada = passwordEncoder.encode(contrasenaPlana);
+                    usuario.setContrasena(contrasenaEncriptada);
+                    System.out.println("🔐 [ClienteService] Contraseña encriptada correctamente");
+                }
             }
             
             usuarioRepository.save(usuario);
